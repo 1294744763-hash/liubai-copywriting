@@ -1,0 +1,78 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "留白"
+      }
+    },
+    {
+      "path": "pages/scene-detail/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "文案"
+      }
+    },
+    {
+      "path": "pages/image-match/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "图片匹配"
+      }
+    },
+    {
+      "path": "pages/rewrite/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "文案改写"
+      }
+    },
+    {
+      "path": "pages/favorites/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "我的收藏"
+      }
+    },
+    {
+      "path": "pages/settings/index",
+      "style": {
+        "navigationStyle": "custom",
+        "navigationBarTitleText": "设置"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "留白",
+    "navigationBarBackgroundColor": "#F8F7F5",
+    "backgroundColor": "#F8F7F5"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#8B9A8F",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/icons/home.png",
+        "selectedIconPath": "static/icons/home-active.png"
+      },
+      {
+        "pagePath": "pages/favorites/index",
+        "text": "收藏",
+        "iconPath": "static/icons/favorite.png",
+        "selectedIconPath": "static/icons/favorite-active.png"
+      },
+      {
+        "pagePath": "pages/settings/index",
+        "text": "设置",
+        "iconPath": "static/icons/settings.png",
+        "selectedIconPath": "static/icons/settings-active.png"
+      }
+    ]
+  }
+}
