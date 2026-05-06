@@ -75,6 +75,24 @@
       </div>
     </section>
 
+    <section class="api-section">
+      <h3 class="section-title">AI配置</h3>
+      <div class="api-card">
+        <div class="api-info">
+          <span class="api-status" :class="{ active: hasApiKey }">
+            {{ hasApiKey ? '✓ 已配置' : '✗ 未配置' }}
+          </span>
+          <span class="api-label">API密钥</span>
+        </div>
+        <button class="api-btn" @click="openApiModal">
+          {{ hasApiKey ? '修改' : '配置' }}
+        </button>
+      </div>
+      <p v-if="!hasApiKey" class="api-tip">
+        💡 配置API密钥后将使用联网AI生成文案，否则使用离线文案库
+      </p>
+    </section>
+
     <section class="about-section">
       <button class="settings-item" @click="showAbout">
         <span class="item-icon">ℹ️</span>
@@ -135,6 +153,51 @@
         </div>
       </div>
     </div>
+
+    <div v-if="showApiModal" class="modal-mask" @click="closeApiModal">
+      <div class="modal-content api-modal" @click.stop>
+        <div class="modal-header">
+          <h3 class="modal-title">配置API密钥</h3>
+          <button class="modal-close" @click="closeApiModal">✕</button>
+        </div>
+        <div class="modal-body">
+          <div class="api-form">
+            <div class="form-group">
+              <label class="form-label">API密钥</label>
+              <input 
+                v-model="apiKey" 
+                type="password" 
+                class="form-input" 
+                placeholder="请输入API密钥"
+              />
+            </div>
+            <div class="form-group">
+              <label class="form-label">服务商</label>
+              <div class="provider-chips">
+                <button 
+                  class="provider-chip"
+                  :class="{ active: apiProvider === 'doubao' }"
+                  @click="apiProvider = 'doubao'"
+                >豆包</button>
+                <button 
+                  class="provider-chip"
+                  :class="{ active: apiProvider === 'openai' }"
+                  @click="apiProvider = 'openai'"
+                >OpenAI</button>
+              </div>
+            </div>
+            <div class="api-hint">
+              <p>🔗 <a href="https://console.doubao.com/" target="_blank">获取豆包API密钥</a></p>
+              <p>🔗 <a href="https://platform.openai.com/" target="_blank">获取OpenAI API密钥</a></p>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="modal-btn cancel" @click="closeApiModal">取消</button>
+          <button class="modal-btn confirm" @click="saveApiKey">保存</button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -142,11 +205,17 @@
 import { ref, computed } from 'vue'
 import { styles, lengths } from '@/data/constants'
 import storage from '@/utils/storage'
+import aiService from '@/utils/aiService'
 
 const preferences = ref(storage.getPreferences())
 const stats = ref(storage.getStats())
 const showStyleModal = ref(false)
 const showLengthModal = ref(false)
+const showApiModal = ref(false)
+const apiKey = ref('')
+const apiProvider = ref('doubao')
+
+const hasApiKey = computed(() => aiService.hasApiKey())
 
 const currentStyleName = computed(() => {
   const style = styles.find((s: { key: string }) => s.key === preferences.value.defaultStyle)
@@ -217,6 +286,30 @@ function showToast(message: string) {
   setTimeout(() => {
     toast.remove()
   }, 2000)
+}
+
+function openApiModal() {
+  apiKey.value = storage.getApiKey() || ''
+  apiProvider.value = storage.getApiProvider() || 'doubao'
+  showApiModal.value = true
+}
+
+function closeApiModal() {
+  showApiModal.value = false
+}
+
+function saveApiKey() {
+  if (!apiKey.value.trim()) {
+    showToast('请输入API密钥')
+    return
+  }
+  
+  storage.saveApiKey(apiKey.value)
+  storage.saveApiProvider(apiProvider.value)
+  showApiModal.value = false
+  showToast('API配置已保存')
+  
+  location.reload()
 }
 </script>
 
@@ -318,6 +411,66 @@ function showToast(message: string) {
   color: var(--text-muted);
 }
 
+.api-section {
+  background: var(--card-color);
+  border-radius: 10px;
+  padding: 16px;
+  margin-bottom: 12px;
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin: 0 0 12px;
+}
+
+.api-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  background: var(--background-color);
+  border-radius: 8px;
+}
+
+.api-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.api-status {
+  font-size: 12px;
+  color: var(--error-color);
+}
+
+.api-status.active {
+  color: #07c160;
+}
+
+.api-label {
+  font-size: 14px;
+  color: var(--text-color);
+  margin-top: 4px;
+}
+
+.api-btn {
+  padding: 8px 16px;
+  background: var(--primary-color);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.api-tip {
+  font-size: 12px;
+  color: var(--text-light);
+  margin: 10px 0 0;
+  line-height: 1.5;
+}
+
 .about-section {
   background: var(--card-color);
   border-radius: 10px;
@@ -384,10 +537,14 @@ input:checked + .slider:before {
 
 .modal-content {
   width: 80%;
-  max-width: 300px;
+  max-width: 320px;
   background: var(--card-color);
   border-radius: 12px;
   overflow: hidden;
+}
+
+.modal-content.api-modal {
+  max-width: 350px;
 }
 
 .modal-header {
@@ -415,9 +572,33 @@ input:checked + .slider:before {
 }
 
 .modal-body {
-  padding: 12px;
-  max-height: 300px;
-  overflow-y: auto;
+  padding: 16px;
+}
+
+.modal-footer {
+  display: flex;
+  gap: 10px;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border-color);
+}
+
+.modal-btn {
+  flex: 1;
+  padding: 10px 0;
+  border-radius: 8px;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+}
+
+.modal-btn.cancel {
+  background: var(--border-color);
+  color: var(--text-light);
+}
+
+.modal-btn.confirm {
+  background: var(--primary-color);
+  color: #FFFFFF;
 }
 
 .modal-option {
@@ -449,6 +630,69 @@ input:checked + .slider:before {
   margin-top: 4px;
 }
 
+.api-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.form-label {
+  font-size: 13px;
+  color: var(--text-light);
+}
+
+.form-input {
+  padding: 12px;
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 14px;
+  color: var(--text-color);
+  outline: none;
+}
+
+.provider-chips {
+  display: flex;
+  gap: 10px;
+}
+
+.provider-chip {
+  flex: 1;
+  padding: 10px 0;
+  background: var(--background-color);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-light);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.provider-chip.active {
+  background: rgba(139, 154, 143, 0.1);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.api-hint {
+  padding: 12px;
+  background: rgba(139, 154, 143, 0.06);
+  border-radius: 8px;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.api-hint a {
+  color: var(--primary-color);
+  text-decoration: none;
+}
+
 .toast {
   position: fixed;
   bottom: 80px;
@@ -460,5 +704,17 @@ input:checked + .slider:before {
   border-radius: 20px;
   font-size: 13px;
   z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>

@@ -19,19 +19,29 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import storage from '@/utils/storage'
 
 const route = useRoute()
 const router = useRouter()
 const currentPath = ref('/')
 
-const navItems = [
-  { path: '/', icon: '🏠', text: '首页' },
-  { path: '/favorites', icon: '🤍', text: '收藏' },
-  { path: '/settings', icon: '⚙️', text: '设置' }
-]
+const navItems = computed(() => {
+  const baseItems = [
+    { path: '/', icon: '🏠', text: '首页' },
+    { path: '/favorites', icon: '🤍', text: '收藏' }
+  ]
+  
+  if (storage.isLoggedIn()) {
+    baseItems.push({ path: '/profile', icon: '👤', text: '我的' })
+  } else {
+    baseItems.push({ path: '/login', icon: '🔑', text: '登录' })
+  }
+  
+  return baseItems
+})
 
 const showNav = computed(() => {
-  const noNavPaths = ['/image-match', '/rewrite']
+  const noNavPaths = ['/image-match', '/rewrite', '/login', '/register']
   return !noNavPaths.includes(currentPath.value)
 })
 

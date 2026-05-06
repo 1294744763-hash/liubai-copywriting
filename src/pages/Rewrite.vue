@@ -15,6 +15,11 @@
       ></textarea>
       <div class="input-footer">
         <span class="input-count">{{ inputText.length }}/500</span>
+        <button 
+          v-if="inputText.trim()" 
+          class="clear-btn" 
+          @click="clearInput"
+        >清空</button>
       </div>
     </section>
 
@@ -47,6 +52,18 @@
           </button>
         </div>
       </div>
+      <div class="param-item">
+        <h3 class="param-label">输出选项</h3>
+        <div class="option-chips">
+          <button 
+            class="option-chip"
+            :class="{ active: includeOriginal }"
+            @click="includeOriginal = !includeOriginal"
+          >
+            {{ includeOriginal ? '✓' : '' }} 包含原文
+          </button>
+        </div>
+      </div>
     </section>
 
     <button 
@@ -54,25 +71,31 @@
       :class="{ loading: isLoading, disabled: !inputText.trim() }" 
       @click="rewrite"
     >
+      <span v-if="isLoading" class="btn-spinner"></span>
       {{ isLoading ? '改写中...' : '一键改写' }}
     </button>
 
     <section v-if="results.length > 0" class="results-section">
-      <h3 class="results-title">改写结果</h3>
+      <div class="results-header">
+        <h3 class="results-title">改写结果</h3>
+        <button class="refresh-btn" @click="rewrite" :disabled="isLoading">🔄</button>
+      </div>
       <div class="results-list">
         <div 
-          v-for="(result, index) in results" 
+          v-for="(result, index) in displayResults" 
           :key="index" 
           class="result-card"
+          :class="{ original: result.isOriginal }"
         >
-          <span class="result-text">{{ result }}</span>
+          <span v-if="result.isOriginal" class="original-badge">原文</span>
+          <span class="result-text">{{ result.text }}</span>
           <div class="result-actions">
             <button 
               class="action-btn" 
-              :class="{ favorited: storage.isFavorited(result) }"
-              @click="toggleFavorite(result)"
-            >{{ storage.isFavorited(result) ? '❤' : '🤍' }}</button>
-            <button class="action-btn" @click="copyText(result)">📋</button>
+              :class="{ favorited: storage.isFavorited(result.text) }"
+              @click="toggleFavorite(result.text)"
+            >{{ storage.isFavorited(result.text) ? '❤' : '🤍' }}</button>
+            <button class="action-btn" @click="copyText(result.text)">📋</button>
           </div>
         </div>
       </div>
@@ -90,20 +113,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
+import { useRouter } from 'vue-router'
 import { styles, lengths } from '@/data/constants'
 import aiService from '@/utils/aiService'
 import storage from '@/utils/storage'
+
+const router = useRouter()
 
 const inputText = ref('')
 const selectedStyle = ref('simple')
 const selectedLength = ref('short')
 const results = ref<string[]>([])
 const isLoading = ref(false)
+const includeOriginal = ref(true)
 
 const prefs = storage.getPreferences()
 selectedStyle.value = prefs.defaultStyle
 selectedLength.value = prefs.defaultLength
+
+const displayResults = computed(() => {
+  const items: { text: string; isOriginal: boolean }[] = []
+  
+  if (includeOriginal.value && inputText.value.trim()) {
+    items.push({ text: inputText.value.trim(), isOriginal: true })
+  }
+  
+  results.value.forEach(text => {
+    items.push({ text, isOriginal: false })
+  })
+  
+  return items
+})
 
 async function rewrite() {
   if (!inputText.value.trim()) {
@@ -118,13 +159,29 @@ async function rewrite() {
       selectedStyle.value,
       selectedLength.value
     )
-    results.value = result
+    results.value = result.filter(r => r.trim() && !r.includes('保持原文') && !r.includes('改写失败'))
+    if (results.value.length === 0) {
+      results.value = generateFallbackResults(inputText.value.trim())
+    }
     storage.updateStats('rewriteCount')
   } catch (error) {
-    showToast('改写失败')
+    console.error('改写失败:', error)
+    results.value = generateFallbackResults(inputText.value.trim())
+    showToast('AI服务暂时不可用，显示推荐文案')
   } finally {
     isLoading.value = false
   }
+}
+
+function generateFallbackResults(original: string): string[] {
+  const transformations = [
+    `${original}，刚刚好`,
+    `在${original}的日子里`,
+    `${original}，是生活的礼物`,
+    `关于${original}，有话说`,
+    `${original}时，想起一些事`
+  ]
+  return transformations
 }
 
 function selectStyle(key: string) {
@@ -133,6 +190,11 @@ function selectStyle(key: string) {
 
 function selectLength(key: string) {
   selectedLength.value = key
+}
+
+function clearInput() {
+  inputText.value = ''
+  results.value = []
 }
 
 function copyText(text: string) {
@@ -164,7 +226,7 @@ function showToast(message: string) {
 }
 
 function goBack() {
-  window.location.hash = '/'
+  router.push('/')
 }
 </script>
 
@@ -218,11 +280,13 @@ function goBack() {
   resize: none;
   outline: none;
   font-family: inherit;
+  background: transparent;
 }
 
 .input-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   margin-top: 8px;
 }
 
@@ -231,12 +295,21 @@ function goBack() {
   color: var(--text-muted);
 }
 
+.clear-btn {
+  font-size: 12px;
+  color: var(--text-light);
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+}
+
 .params-section {
   padding: 12px 0;
 }
 
 .param-item {
-  margin-bottom: 12px;
+  margin-bottom: 16px;
 }
 
 .param-label {
@@ -259,6 +332,7 @@ function goBack() {
   color: var(--text-light);
   border: 1px solid transparent;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .param-chip.active {
@@ -282,9 +356,32 @@ function goBack() {
   text-align: center;
   border: 1px solid transparent;
   cursor: pointer;
+  transition: all 0.2s;
 }
 
 .length-chip.active {
+  background: rgba(139, 154, 143, 0.1);
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.option-chips {
+  display: flex;
+  gap: 8px;
+}
+
+.option-chip {
+  padding: 8px 14px;
+  background: var(--card-color);
+  border-radius: 16px;
+  font-size: 12px;
+  color: var(--text-light);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.option-chip.active {
   background: rgba(139, 154, 143, 0.1);
   color: var(--primary-color);
   border-color: var(--primary-color);
@@ -302,6 +399,11 @@ function goBack() {
   border: none;
   cursor: pointer;
   width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: opacity 0.2s;
 }
 
 .rewrite-btn.loading {
@@ -310,17 +412,52 @@ function goBack() {
 
 .rewrite-btn.disabled {
   background: var(--border-color);
+  cursor: not-allowed;
+}
+
+.btn-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #FFFFFF;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 .results-section {
   padding: 12px 0;
 }
 
+.results-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
 .results-title {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-color);
-  margin-bottom: 10px;
+  margin: 0;
+}
+
+.refresh-btn {
+  font-size: 14px;
+  color: var(--text-light);
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+
+.refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .results-list {
@@ -334,9 +471,23 @@ function goBack() {
   border-radius: 10px;
   padding: 14px;
   display: flex;
-  justify-content: space-between;
   align-items: center;
   box-shadow: 0 1px 6px rgba(0, 0, 0, 0.04);
+  position: relative;
+}
+
+.result-card.original {
+  background: rgba(139, 154, 143, 0.06);
+  border-left: 3px solid var(--primary-color);
+}
+
+.original-badge {
+  font-size: 10px;
+  color: var(--primary-color);
+  background: rgba(139, 154, 143, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-right: 10px;
 }
 
 .result-text {
@@ -344,6 +495,7 @@ function goBack() {
   color: var(--text-color);
   flex: 1;
   padding-right: 10px;
+  line-height: 1.5;
 }
 
 .result-actions {
@@ -401,5 +553,17 @@ function goBack() {
   border-radius: 20px;
   font-size: 13px;
   z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
 }
 </style>
