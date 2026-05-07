@@ -28,6 +28,15 @@
       </div>
     </section>
 
+    <section class="ai-chat-card" @click="goToChat">
+      <div class="ai-chat-icon-wrapper">
+        <span class="ai-chat-icon">🤖</span>
+        <span class="ai-chat-badge">AI</span>
+      </div>
+      <h3 class="ai-chat-title">AI对话</h3>
+      <p class="ai-chat-desc">与AI自由对话，获取灵感</p>
+    </section>
+
     <section class="mode-tabs">
       <button 
         class="mode-tab" 
@@ -372,6 +381,10 @@ function goToScene(sceneKey: string) {
   router.push(`/scene/${sceneKey}`)
 }
 
+function goToChat() {
+  router.push('/chat')
+}
+
 function goToRewrite() {
   router.push('/rewrite')
 }
@@ -441,6 +454,73 @@ function goToRewrite() {
   font-size: 12px;
   color: rgba(255, 255, 255, 0.8);
   margin: 0;
+}
+
+.ai-chat-card {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 14px;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.3);
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -50%;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+  }
+}
+
+.ai-chat-icon-wrapper {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.ai-chat-icon {
+  font-size: 24px;
+}
+
+.ai-chat-badge {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background: #ff6b6b;
+  color: #fff;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 10px;
+}
+
+.ai-chat-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #FFFFFF;
+  margin: 0 0 4px;
+  position: relative;
+}
+
+.ai-chat-desc {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  margin: 0;
+  position: relative;
 }
 
 .custom-section {
