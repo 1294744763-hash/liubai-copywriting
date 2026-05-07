@@ -184,11 +184,17 @@
                   :class="{ active: apiProvider === 'openai' }"
                   @click="apiProvider = 'openai'"
                 >OpenAI</button>
+                <button 
+                  class="provider-chip"
+                  :class="{ active: apiProvider === 'huggingface' }"
+                  @click="apiProvider = 'huggingface'"
+                >Hugging Face</button>
               </div>
             </div>
             <div class="api-hint">
               <p>🔗 <a href="https://console.doubao.com/" target="_blank">获取豆包API密钥</a></p>
               <p>🔗 <a href="https://platform.openai.com/" target="_blank">获取OpenAI API密钥</a></p>
+              <p>🔗 <a href="https://huggingface.co/settings/tokens" target="_blank">获取Hugging Face API密钥</a></p>
             </div>
           </div>
         </div>
