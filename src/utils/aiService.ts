@@ -42,6 +42,8 @@ class AIService {
     }
 
     try {
+      console.log('正在发送聊天请求:', message.substring(0, 30) + '...')
+      
       const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
         method: 'POST',
         headers: {
@@ -65,19 +67,45 @@ class AIService {
         })
       })
 
+      console.log('HTTP状态码:', response.status, response.statusText)
       const data = await response.json()
-      console.log('Chat API response:', data)
+      console.log('完整API响应:', JSON.stringify(data, null, 2))
       
       if (!response.ok) {
-        throw new Error(data.error || 'API请求失败')
+        const errorMsg = data.error?.message || data.message || data.error || `HTTP错误 ${response.status}`
+        console.error('API请求失败:', errorMsg)
+        throw new Error(errorMsg)
       }
 
-      const content = data.output?.content?.[0]?.text || data.result || ''
-      return content.trim() || '没有获取到响应'
+      const content = this.extractContent(data)
+      console.log('提取到的内容:', content)
+      
+      return content || '抱歉，没有获取到响应，请重试'
     } catch (error) {
       console.error('AI对话失败:', error)
       return `对话失败：${error instanceof Error ? error.message : '未知错误'}`
     }
+  }
+
+  private extractContent(data: any): string {
+    // 尝试多种可能的响应格式
+    if (data.output && data.output.content && Array.isArray(data.output.content)) {
+      for (const item of data.output.content) {
+        if (item.text) return item.text.trim()
+        if (item.content) return item.content.trim()
+      }
+    }
+    
+    if (data.result) return data.result.trim()
+    
+    if (data.choices && Array.isArray(data.choices)) {
+      if (data.choices[0]?.message?.content) return data.choices[0].message.content.trim()
+      if (data.choices[0]?.text) return data.choices[0].text.trim()
+    }
+    
+    if (data.content) return data.content.trim()
+    
+    return ''
   }
 
   async analyzeImage(imageUrl: string): Promise<string> {
@@ -114,7 +142,7 @@ class AIService {
       })
 
       const data = await response.json()
-      const scene = data.output?.content?.[0]?.text || data.choices?.[0]?.message?.content || ''
+      const scene = this.extractContent(data)
       
       return this.matchScene(scene)
     } catch (error) {
@@ -204,11 +232,11 @@ class AIService {
       if (!response.ok) {
         const errorData = await response.json()
         console.error('API错误:', errorData)
-        throw new Error(errorData.error || `HTTP错误 ${response.status}`)
+        throw new Error(errorData.error?.message || errorData.message || errorData.error || `HTTP错误 ${response.status}`)
       }
 
       const data = await response.json()
-      console.log('API返回数据:', data)
+      console.log('API返回数据:', JSON.stringify(data, null, 2))
       
       return this.parseDoubaoResponse(data, count)
       
@@ -219,7 +247,7 @@ class AIService {
   }
 
   private parseDoubaoResponse(data: any, count: number): string[] {
-    const content = data.output?.content?.[0]?.text || data.result || ''
+    const content = this.extractContent(data)
     
     if (!content) {
       console.error('API返回异常:', data)
