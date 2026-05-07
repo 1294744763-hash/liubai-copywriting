@@ -6,8 +6,14 @@ class AIService {
     const storedKey = localStorage.getItem('liubai_api_key')
     const storedProvider = localStorage.getItem('liubai_api_provider')
     
-    this.apiKey = storedKey || (import.meta.env.VUE_APP_AI_API_KEY as string) || ''
-    this.provider = storedProvider || (import.meta.env.VUE_APP_AI_PROVIDER as string) || 'doubao'
+    this.apiKey = storedKey || (import.meta.env.VITE_AI_API_KEY as string) || ''
+    this.provider = storedProvider || (import.meta.env.VITE_AI_PROVIDER as string) || 'doubao'
+    
+    console.log('AI Service initialized:', {
+      hasApiKey: this.hasApiKey(),
+      provider: this.provider,
+      apiKeyPrefix: this.apiKey ? this.apiKey.substring(0, 10) + '...' : 'none'
+    })
   }
 
   hasApiKey(): boolean {
