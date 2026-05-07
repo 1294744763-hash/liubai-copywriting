@@ -29,6 +29,84 @@ class AIService {
     return this.requestAI(prompt, 5)
   }
 
+  async analyzeImage(imageUrl: string): Promise<string> {
+    if (!this.hasApiKey()) {
+      console.warn('未配置API密钥，使用随机场景')
+      return this.getRandomScene()
+    }
+
+    try {
+      const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'doubao-seed-1-8-251228',
+          input: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'input_image',
+                  image_url: imageUrl
+                },
+                {
+                  type: 'input_text',
+                  text: '请分析这张图片，判断它最适合以下哪个场景：日常随拍、自驾旅行、夜景晚风、美食探店、独处心情、生日、节假日、早安、表白、友情、工作、自然。只返回场景名称，不要其他解释。'
+                }
+              ]
+            }
+          ]
+        })
+      })
+
+      const data = await response.json()
+      const scene = data.output?.content?.[0]?.text || data.choices?.[0]?.message?.content || ''
+      
+      return this.matchScene(scene)
+    } catch (error) {
+      console.error('图片分析失败:', error)
+      return this.getRandomScene()
+    }
+  }
+
+  private matchScene(sceneText: string): string {
+    const sceneMap: Record<string, string> = {
+      '日常': 'daily',
+      '随拍': 'daily',
+      '旅行': 'travel',
+      '自驾': 'travel',
+      '夜景': 'night',
+      '晚风': 'night',
+      '美食': 'food',
+      '探店': 'food',
+      '独处': 'alone',
+      '心情': 'alone',
+      '生日': 'birthday',
+      '节日': 'holiday',
+      '早安': 'morning',
+      '表白': 'love',
+      '友情': 'friend',
+      '工作': 'work',
+      '自然': 'nature'
+    }
+
+    for (const [key, value] of Object.entries(sceneMap)) {
+      if (sceneText.includes(key)) {
+        return value
+      }
+    }
+
+    return this.getRandomScene()
+  }
+
+  private getRandomScene(): string {
+    const scenes = ['daily', 'travel', 'night', 'food', 'alone']
+    return scenes[Math.floor(Math.random() * scenes.length)]
+  }
+
   private getLengthDescription(length: string): string {
     switch (length) {
       case 'short': return '字数控制在10-25字左右'

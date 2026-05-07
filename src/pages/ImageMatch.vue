@@ -132,8 +132,7 @@ async function generate() {
 }
 
 async function analyzeImage(path: string): Promise<string> {
-  const scenes = ['daily', 'travel', 'night', 'food', 'alone']
-  return scenes[Math.floor(Math.random() * scenes.length)]
+  return await aiService.analyzeImage(path)
 }
 
 function selectStyle(key: string) {
