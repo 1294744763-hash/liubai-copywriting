@@ -122,8 +122,7 @@ async function sendMessage() {
   scrollToBottom()
 
   try {
-    const result = await aiService.customGenerate(text, 1)
-    const aiResponse = result[0] || '抱歉，我不太明白你的意思。'
+    const aiResponse = await aiService.chat(text)
     
     messages.value.push({
       content: aiResponse,

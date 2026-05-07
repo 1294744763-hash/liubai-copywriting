@@ -35,6 +35,51 @@ class AIService {
     return this.requestAI(prompt, 5)
   }
 
+  async chat(message: string): Promise<string> {
+    if (!this.hasApiKey()) {
+      console.warn('未配置API密钥')
+      return '抱歉，AI服务暂时不可用'
+    }
+
+    try {
+      const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'doubao-seed-1-8-251228',
+          input: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'input_text',
+                  text: message
+                }
+              ]
+            }
+          ],
+          stream: false
+        })
+      })
+
+      const data = await response.json()
+      console.log('Chat API response:', data)
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'API请求失败')
+      }
+
+      const content = data.output?.content?.[0]?.text || data.result || ''
+      return content.trim() || '没有获取到响应'
+    } catch (error) {
+      console.error('AI对话失败:', error)
+      return `对话失败：${error instanceof Error ? error.message : '未知错误'}`
+    }
+  }
+
   async analyzeImage(imageUrl: string): Promise<string> {
     if (!this.hasApiKey()) {
       console.warn('未配置API密钥，使用随机场景')
@@ -129,99 +174,76 @@ class AIService {
     }
 
     try {
-      let response: Response
-      let data: any
+      console.log('正在发送AI请求，prompt:', prompt.substring(0, 50) + '...')
+      
+      const response = await fetch('https://ark.cn-beijing.volces.com/api/v3/responses', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.apiKey}`
+        },
+        body: JSON.stringify({
+          model: 'doubao-seed-1-8-251228',
+          input: [
+            {
+              role: 'user',
+              content: [
+                {
+                  type: 'input_text',
+                  text: prompt
+                }
+              ]
+            }
+          ],
+          stream: false
+        })
+      })
 
-      switch (this.provider) {
-        case 'openai':
-          response = await fetch('https://api.openai.com/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.apiKey}`
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o-mini',
-              messages: [
-                { role: 'system', content: '你是一位极简文艺风格的文案大师，擅长创作有质感、清冷高级有留白感的文案，拒绝鸡汤和土味内容。' },
-                { role: 'user', content: prompt }
-              ],
-              max_tokens: 500,
-              temperature: 0.8,
-              n: 1
-            })
-          })
-          data = await response.json()
-          return this.parseAIResponse(data, count)
-
-        case 'doubao':
-          response = await fetch('https://ark.cn-beijing.volces.com/api/text/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.apiKey}`
-            },
-            body: JSON.stringify({
-              model: 'doubao-3.5-pro',
-              messages: [
-                { role: 'system', content: '你是一位极简文艺风格的文案大师，擅长创作有质感、清冷高级有留白感的文案，拒绝鸡汤和土味内容。' },
-                { role: 'user', content: prompt }
-              ],
-              max_tokens: 500,
-              temperature: 0.8
-            })
-          })
-          data = await response.json()
-          return this.parseAIResponse(data, count)
-
-        case 'huggingface':
-          response = await fetch('https://api-inference.huggingface.co/models/Qwen/Qwen2-7B-Instruct', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.apiKey}`
-            },
-            body: JSON.stringify({
-              inputs: `<s>[INST] 你是一位极简文艺风格的文案大师，擅长创作有质感、清冷高级有留白感的文案，拒绝鸡汤和土味内容。请根据以下要求创作：${prompt} [/INST]`,
-              parameters: {
-                max_new_tokens: 500,
-                temperature: 0.8,
-                top_p: 0.9,
-                repetition_penalty: 1.1
-              }
-            })
-          })
-          data = await response.json()
-          if (data.error) {
-            console.error('Hugging Face API错误:', data.error)
-            throw new Error(data.error)
-          }
-          return this.parseHuggingFaceResponse(data, count)
-
-        default:
-          response = await fetch('https://ark.cn-beijing.volces.com/api/text/v1/chat/completions', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${this.apiKey}`
-            },
-            body: JSON.stringify({
-              model: 'doubao-3.5-pro',
-              messages: [
-                { role: 'system', content: '你是一位极简文艺风格的文案大师，擅长创作有质感、清冷高级有留白感的文案，拒绝鸡汤和土味内容。' },
-                { role: 'user', content: prompt }
-              ],
-              max_tokens: 500,
-              temperature: 0.8
-            })
-          })
-          data = await response.json()
-          return this.parseAIResponse(data, count)
+      console.log('API响应状态:', response.status)
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        console.error('API错误:', errorData)
+        throw new Error(errorData.error || `HTTP错误 ${response.status}`)
       }
+
+      const data = await response.json()
+      console.log('API返回数据:', data)
+      
+      return this.parseDoubaoResponse(data, count)
+      
     } catch (error) {
       console.error('AI请求失败:', error)
       return this.getFallbackCopywritings(count)
     }
+  }
+
+  private parseDoubaoResponse(data: any, count: number): string[] {
+    const content = data.output?.content?.[0]?.text || data.result || ''
+    
+    if (!content) {
+      console.error('API返回异常:', data)
+      throw new Error('API返回异常')
+    }
+    
+    let results = content.split('\n').filter((item: string) => {
+      const trimmed = item.trim()
+      return trimmed && !trimmed.startsWith('##') && !trimmed.startsWith('###') && trimmed.length > 5
+    })
+
+    results = results.map((item: string) => {
+      return item.trim()
+        .replace(/^[\d一二三四五六七八九十]+[\.\uff0e、]\s*/, '')
+        .replace(/^[①②③④⑤⑥⑦⑧⑨⑩]+\s*/, '')
+        .replace(/^[-•*]\s*/, '')
+        .trim()
+    }).filter((item: string) => item.length > 5)
+
+    if (results.length === 0) {
+      results = [content.trim()]
+    }
+
+    return results.slice(0, Math.min(count, results.length))
   }
 
   private parseHuggingFaceResponse(data: any, count: number): string[] {
